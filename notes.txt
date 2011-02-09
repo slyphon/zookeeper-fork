@@ -10,5 +10,8 @@ I'm planning on writing a companion gem, 'ZK', that would take some of the highe
 
 I'd like to reorganize this codebase in a number of ways, most of all to move all of the various classes and modules under a common "Zookeeper" namespace, however I thought that would be a radical enough change where I'd want to discuss/coordinate with you on how exactly to do it.
 
+Things I need help with:
+
+* packaging: no idea how Echoe works. want to make two gems, an MRI 'plain' gem and a jruby-specific *-java.gem with extra dependencies on the log4j and zookeeper_jars gems.
 
 
