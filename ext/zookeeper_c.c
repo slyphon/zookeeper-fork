@@ -88,7 +88,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(0); // no log messages
   } else {
     Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level(log_level);
+    zoo_set_debug_level((ZooLogLevel)log_level);
   }
 
 
@@ -238,10 +238,24 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
+      rc = zoo_create(zk->zh, 
+		      RSTRING_PTR(path), 
+		      data_ptr, 
+		      data_len, 
+		      aclptr, 
+		      FIX2INT(flags), 
+		      realpath, 
+		      (int)sizeof(realpath));
       break;
     case ASYNC:
-      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
+      rc = zoo_acreate(zk->zh, 
+		       RSTRING_PTR(path), 
+		       data_ptr, 
+		       data_len, 
+		       aclptr, 
+		       FIX2INT(flags), 
+		       zkrb_string_callback, 
+		       data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -340,11 +354,21 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version), &stat);
+      rc = zoo_set2(zk->zh, 
+		    RSTRING_PTR(path), 
+		    data_ptr, 
+		    data_len, 
+		    FIX2INT(version), 
+		    &stat);
       break;
     case ASYNC:
-      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version),
-                            zkrb_stat_callback, data_ctx);
+      rc = zoo_aset(zk->zh, 
+		    RSTRING_PTR(path), 
+		    data_ptr, 
+		    data_len, 
+		    FIX2INT(version),
+                    zkrb_stat_callback, 
+		    data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
