@@ -11,9 +11,9 @@ require 'zookeeper/acls'
 require 'logger'
 
 if defined?(::JRUBY_VERSION)
-  $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
+  $LOAD_PATH.unshift(File.expand_path('../../java', __FILE__)).uniq!
 else
-  $LOAD_PATH.unshift(File.expand_path('../ext', File.dirname(__FILE__))).uniq!
+  $LOAD_PATH.unshift(File.expand_path('../../ext', __FILE__)).uniq!
   require 'zookeeper_c'
 end
 

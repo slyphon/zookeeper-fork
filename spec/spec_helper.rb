@@ -6,6 +6,11 @@ require 'rubygems'
 
 gem 'flexmock', '~> 0.8.11'
 
+# if defined?(::JRUBY_VERSION)
+#   require 'java'
+#   java.lang.System.setProperty('log4j.configuration', File.expand_path('../log4j.properties', __FILE__))
+# end
+
 require 'flexmock'
 require 'zookeeper'
 
@@ -18,8 +23,8 @@ end
 # logging statements both go to stderr. to use, comment the above and uncomment
 # below
 
-# Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
-# Zookeeper.set_debug_level(4)
+Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
+Zookeeper.set_debug_level(4)
 
 def logger
   Zookeeper.logger

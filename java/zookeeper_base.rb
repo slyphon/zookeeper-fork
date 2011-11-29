@@ -1,12 +1,15 @@
 require 'java'
 require 'thread'
-require 'rubygems'
-
-gem 'slyphon-log4j', '= 1.2.15'
-gem 'slyphon-zookeeper_jar', '= 3.3.3'
 
 require 'log4j'
+require 'slf4j-api-1.6.4'
+require 'slf4j-log4j12-1.6.4'
 require 'zookeeper_jar'
+
+unless ZookeeperJar::VERSION == '3.4.0'
+  raise LoadError, "Need slyphon-zookeeper_jar version 3.4.0, got version #{ZookeeperJar::VERSION}"
+end
+
 
 # The low-level wrapper-specific methods for the Java lib,
 # subclassed by the top-level Zookeeper class

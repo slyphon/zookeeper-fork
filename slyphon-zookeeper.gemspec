@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "slyphon-zookeeper"
-  s.version     = '0.2.0'
+  s.version     = '0.3.0.beta.1'
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
@@ -21,7 +21,8 @@ Gem::Specification.new do |s|
   if ENV['JAVA_GEM'] or defined?(::JRUBY_VERSION)
     s.platform = 'java'
     s.add_runtime_dependency('slyphon-log4j',         '= 1.2.15')
-    s.add_runtime_dependency('slyphon-zookeeper_jar', '= 3.3.3')
+    s.add_runtime_dependency('slyphon-slf4j_jar',     '= 0.0.1')
+    s.add_runtime_dependency('slyphon-zookeeper_jar', '= 3.4.0')
     s.require_paths += %w[java]
   else
     s.require_paths += %w[ext]
