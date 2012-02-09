@@ -7,6 +7,7 @@ require 'monitor'
 module Zookeeper
 end
 
+require 'zookeeper/null_logger'
 require 'zookeeper/acls'
 require 'zookeeper/constants'
 require 'zookeeper/exceptions'
@@ -24,7 +25,7 @@ module Zookeeper
   include Constants
 
   unless defined?(@@logger)
-    @@logger = Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+    @@logger = NullLogger.new
   end
 
   def self.logger

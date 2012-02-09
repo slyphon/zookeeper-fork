@@ -8,6 +8,7 @@ gem 'flexmock', '~> 0.8.11'
 
 require 'flexmock'
 require 'zookeeper'
+require 'logger'
 
 Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap do |log|
   log.level = Logger::DEBUG

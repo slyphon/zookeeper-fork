@@ -4,7 +4,6 @@ if defined?(::JRUBY_VERSION)
   $LOAD_PATH.unshift(File.expand_path('../../../java', __FILE__)).uniq!
 else
   $LOAD_PATH.unshift(File.expand_path('../../../ext', __FILE__)).uniq!
-  require 'zookeeper_c'
 end
 
 require 'zookeeper_base'

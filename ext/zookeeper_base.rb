@@ -1,4 +1,4 @@
-# require File.expand_path('../zookeeper_c', __FILE__)
+require 'zookeeper_c'
 
 # The low-level wrapper-specific methods for the C lib
 # subclassed by the top-level Zookeeper class
