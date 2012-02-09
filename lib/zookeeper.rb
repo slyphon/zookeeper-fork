@@ -16,19 +16,6 @@ require 'zookeeper/stat'
 require 'zookeeper/client_methods'
 require 'logger'
 
-# figure out what platform driver we're wrapping
-
-if defined?(::JRUBY_VERSION)
-  $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
-else
-  raise "Only working for jruby right now, kthxbai!"
-
-  $LOAD_PATH.unshift(File.expand_path('../ext', File.dirname(__FILE__))).uniq!
-  require 'zookeeper_c'
-end
-
-require 'zookeeper_base'
-
 # finally construct the client
 require 'zookeeper/client'
 

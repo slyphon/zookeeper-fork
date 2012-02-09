@@ -1,10 +1,25 @@
-module Zookeeper
-  class Client
-    if defined?(::JRUBY_VERSION)
-      include Zookeeper::JavaBase
-    end
+# figure out what platform driver we're wrapping
 
-    include ClientMethods
+if defined?(::JRUBY_VERSION)
+  $LOAD_PATH.unshift(File.expand_path('../../../java', __FILE__)).uniq!
+else
+  $LOAD_PATH.unshift(File.expand_path('../../../ext', __FILE__)).uniq!
+  require 'zookeeper_c'
+end
+
+require 'zookeeper_base'
+
+module Zookeeper
+  if defined?(::JRUBY_VERSION)
+    class Client < Zookeeper::JavaBase
+    end
+  else
+    class Client < Zookeeper::ZookeeperBase
+    end
   end
+end
+
+Zookeeper::Client.class_eval do
+  include Zookeeper::ClientMethods
 end
 

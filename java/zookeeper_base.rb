@@ -11,7 +11,7 @@ require 'zookeeper_jar'
 # The low-level wrapper-specific methods for the Java lib,
 # subclassed by the top-level Zookeeper class
 module Zookeeper
-  module JavaBase
+  class JavaBase
     include Java
     include Zookeeper::Common
     include Zookeeper::Constants
