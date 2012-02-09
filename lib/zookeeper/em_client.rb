@@ -1,8 +1,9 @@
 require 'zookeeper'
 require 'eventmachine'
 
-module ZookeeperEM 
-  class Client < Zookeeper
+module Zookeeper
+  class EMClient < Client
+
     # @private
     # the EM Connection instance we receive once we call EM.watch on our selectable_io
     attr_reader :em_connection
@@ -11,7 +12,7 @@ module ZookeeperEM
       @on_close       = EM::DefaultDeferrable.new
       @on_attached    = EM::DefaultDeferrable.new
       @em_connection  = nil
-      logger.debug { "ZookeeperEM::Client obj_id %x: init" % [object_id] }
+      logger.debug { "Zookeeper::EMClient obj_id %x: init" % [object_id] }
       super(*a, &b)
     end
 
@@ -63,7 +64,7 @@ module ZookeeperEM
       on_close
     end
 
-    # make this public as the ZKConnection object needs to call it
+    # make this public as the ZKEMConnection object needs to call it
     public :dispatch_next_callback
 
   protected
@@ -74,7 +75,7 @@ module ZookeeperEM
         if running? and not closed?
           begin
             logger.debug { "adding EM.watch(#{selectable_io.inspect})" }
-            @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
+            @em_connection = EM.watch(selectable_io, ZKEMConnection, self) { |cnx| cnx.notify_readable = true }
           rescue Exception => e
             $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
           end
@@ -106,7 +107,7 @@ module ZookeeperEM
   # When the pipe is readable, that means there's an event waiting. We call
   # dispatch_next_event and read a single byte off the pipe.
   #
-  class ZKConnection < EM::Connection
+  class ZKEMConnection < EM::Connection
 
     def initialize(zk_client)
       @zk_client = zk_client

@@ -5,13 +5,13 @@ gem 'evented-spec', '~> 0.9.0'
 require 'evented-spec'
 
 
-describe 'ZookeeperEM' do
-  describe 'Client' do
+describe 'Zookeeper' do
+  describe 'EMClient' do
     include EventedSpec::SpecHelper
     default_timeout 3.0
 
     def setup_zk
-      @zk = ZookeeperEM::Client.new('localhost:2181')
+      @zk = Zookeeper::EMClient.new('localhost:2181')
       em do
         @zk.on_attached do
           yield
@@ -44,7 +44,7 @@ describe 'ZookeeperEM' do
       end
 
       before do
-        @data_cb = ZookeeperCallbacks::DataCallback.new do
+        @data_cb = Zookeeper::Callbacks::DataCallback.new do
           logger.debug { "cb called: #{@data_cb.inspect}" }
         end
       end
@@ -64,7 +64,7 @@ describe 'ZookeeperEM' do
 
     describe 'em_connection' do
       before do
-        @zk = ZookeeperEM::Client.new('localhost:2181')
+        @zk = Zookeeper::EMClient.new('localhost:2181')
       end
 
       it %[should be nil before the reactor is started] do
@@ -78,7 +78,7 @@ describe 'ZookeeperEM' do
       it %[should fire off the on_attached callbacks once the reactor is managing us] do
         @zk.on_attached do |*|
           @zk.em_connection.should_not be_nil
-          @zk.em_connection.should be_instance_of(ZookeeperEM::ZKConnection)
+          @zk.em_connection.should be_instance_of(Zookeeper::ZKEMConnection)
           teardown_and_done
         end
 

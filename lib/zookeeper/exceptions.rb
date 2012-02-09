@@ -1,33 +1,10 @@
-module ZookeeperExceptions
-  # exceptions/errors
-  ZOK                    =  0
-  ZSYSTEMERROR           = -1
-  ZRUNTIMEINCONSISTENCY  = -2
-  ZDATAINCONSISTENCY     = -3
-  ZCONNECTIONLOSS        = -4
-  ZMARSHALLINGERROR      = -5
-  ZUNIMPLEMENTED         = -6
-  ZOPERATIONTIMEOUT      = -7
-  ZBADARGUMENTS          = -8
-  ZINVALIDSTATE          = -9
-  
-  # api errors
-  ZAPIERROR                 = -100
-  ZNONODE                   = -101
-  ZNOAUTH                   = -102
-  ZBADVERSION               = -103
-  ZNOCHILDRENFOREPHEMERALS  = -108
-  ZNODEEXISTS               = -110
-  ZNOTEMPTY                 = -111
-  ZSESSIONEXPIRED           = -112
-  ZINVALIDCALLBACK          = -113
-  ZINVALIDACL               = -114
-  ZAUTHFAILED               = -115
-  ZCLOSING                  = -116
-  ZNOTHING                  = -117
-  ZSESSIONMOVED             = -118
+module Zookeeper
+  module Exceptions
+    include Constants
 
-  class ZookeeperException < Exception
+    class ZookeeperException < StandardError
+    end
+
     class EverythingOk            < ZookeeperException; end
     class SystemError             < ZookeeperException; end
     class RunTimeInconsistency    < ZookeeperException; end
@@ -61,31 +38,32 @@ module ZookeeperExceptions
     
     def self.by_code(code)
       case code
-        when ZOK then EverythingOk
-        when ZSYSTEMERROR then SystemError
-        when ZRUNTIMEINCONSISTENCY then RunTimeInconsistency
-        when ZDATAINCONSISTENCY then DataInconsistency
-        when ZCONNECTIONLOSS then ConnectionLoss
-        when ZMARSHALLINGERROR then MarshallingError
-        when ZUNIMPLEMENTED then Unimplemented
-        when ZOPERATIONTIMEOUT then OperationTimeOut
-        when ZBADARGUMENTS then BadArguments
-        when ZINVALIDSTATE then InvalidState
-        when ZAPIERROR then ApiError
-        when ZNONODE then NoNode
-        when ZNOAUTH then NoAuth
-        when ZBADVERSION then BadVersion
-        when ZNOCHILDRENFOREPHEMERALS then NoChildrenForEphemerals 
-        when ZNODEEXISTS then NodeExists              
-        when ZNOTEMPTY then NotEmpty                
-        when ZSESSIONEXPIRED then SessionExpired          
-        when ZINVALIDCALLBACK then InvalidCallback         
-        when ZINVALIDACL then InvalidACL
-        when ZAUTHFAILED then AuthFailed
-        when ZCLOSING then Closing
-        when ZNOTHING then Nothing
-        when ZSESSIONMOVED then SessionMoved
-      else Exception.new("no exception defined for code #{code}")
+      when ZOK then EverythingOk
+      when ZSYSTEMERROR then SystemError
+      when ZRUNTIMEINCONSISTENCY then RunTimeInconsistency
+      when ZDATAINCONSISTENCY then DataInconsistency
+      when ZCONNECTIONLOSS then ConnectionLoss
+      when ZMARSHALLINGERROR then MarshallingError
+      when ZUNIMPLEMENTED then Unimplemented
+      when ZOPERATIONTIMEOUT then OperationTimeOut
+      when ZBADARGUMENTS then BadArguments
+      when ZINVALIDSTATE then InvalidState
+      when ZAPIERROR then ApiError
+      when ZNONODE then NoNode
+      when ZNOAUTH then NoAuth
+      when ZBADVERSION then BadVersion
+      when ZNOCHILDRENFOREPHEMERALS then NoChildrenForEphemerals 
+      when ZNODEEXISTS then NodeExists              
+      when ZNOTEMPTY then NotEmpty                
+      when ZSESSIONEXPIRED then SessionExpired          
+      when ZINVALIDCALLBACK then InvalidCallback         
+      when ZINVALIDACL then InvalidACL
+      when ZAUTHFAILED then AuthFailed
+      when ZCLOSING then Closing
+      when ZNOTHING then Nothing
+      when ZSESSIONMOVED then SessionMoved
+      else 
+        raise "no exception defined for code #{code}"
       end
     end
     

@@ -52,7 +52,7 @@ describe Zookeeper do
 
       it %[should return a stat] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
       end
     end
 
@@ -61,7 +61,7 @@ describe Zookeeper do
 
       before do
         @event = nil
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = @zk.get(:path => @path, :watcher => @watcher, :watcher_context => @path) 
       end
@@ -87,7 +87,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::DataCallback.new
+        @cb = Zookeeper::Callbacks::DataCallback.new
 
         @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path)
         wait_until(1.0) { @cb.completed? }
@@ -100,7 +100,7 @@ describe Zookeeper do
 
       it %[should have the stat object in the callback] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
@@ -112,8 +112,8 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::DataCallback.new
-        @watcher = Zookeeper::WatcherCallback.new
+        @cb = Zookeeper::Callbacks::DataCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
         wait_until(1.0) { @cb.completed? }
@@ -122,7 +122,7 @@ describe Zookeeper do
 
       it %[should have the stat object in the callback] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
@@ -147,7 +147,7 @@ describe Zookeeper do
 
     describe 'bad arguments' do
       it %[should barf with a BadArguments error] do
-        lambda { @zk.get(:bad_arg => 'what!?') }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+        lambda { @zk.get(:bad_arg => 'what!?') }.should raise_error(Zookeeper::Exceptions::BadArguments)
       end
     end
   end   # get
@@ -168,7 +168,7 @@ describe Zookeeper do
 
         it %[should return the new stat] do
           @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+          @rv[:stat].should be_kind_of(Zookeeper::Stat)
           @rv[:stat].version.should > @stat.version
         end
       end
@@ -182,7 +182,7 @@ describe Zookeeper do
 
         it %[should return the new stat] do
           @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+          @rv[:stat].should be_kind_of(Zookeeper::Stat)
           @rv[:stat].version.should > @stat.version
         end
       end
@@ -208,14 +208,14 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.set(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { @zk.set(:path => @path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
     end   # sync
 
     describe :async do
       before do
-        @cb = Zookeeper::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
       end
 
       describe 'without version' do
@@ -282,7 +282,7 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.set(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { @zk.set(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -321,7 +321,7 @@ describe Zookeeper do
 
       it %[should have a stat object whose num_children is 3] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
         @rv[:stat].num_children.should == 3
       end
     end
@@ -332,7 +332,7 @@ describe Zookeeper do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = @zk.get_children(:path => @path, :watcher => @watcher, :watcher_context => @path)
       end
@@ -349,7 +349,7 @@ describe Zookeeper do
 
       it %[should have a stat object whose num_children is 3] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
         @rv[:stat].num_children.should == 3
       end
 
@@ -371,7 +371,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = ZookeeperCallbacks::StringsCallback.new
+        @cb = Zookeeper::Callbacks::StringsCallback.new
         @rv = @zk.get_children(:path => @path, :callback => @cb, :callback_context => @path)
 
         wait_until { @cb.completed? }
@@ -390,7 +390,7 @@ describe Zookeeper do
 
       it %[should have a stat object whose num_children is 3] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
         @cb.stat.num_children.should == 3
       end
     end
@@ -401,8 +401,8 @@ describe Zookeeper do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
-        @cb = ZookeeperCallbacks::StringsCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
+        @cb = Zookeeper::Callbacks::StringsCallback.new
 
         @rv = @zk.get_children(:path => @path, :watcher => @watcher, :watcher_context => @path, :callback => @cb, :callback_context => @path)
         wait_until { @cb.completed? }
@@ -425,7 +425,7 @@ describe Zookeeper do
 
       it %[should have a stat object whose num_children is 3] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
         @cb.stat.num_children.should == 3
       end
 
@@ -463,7 +463,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = @zk.stat(:path => @path, :watcher => @watcher, :watcher_context => @path)
       end
@@ -490,7 +490,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = ZookeeperCallbacks::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
         @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path)
 
         wait_until { @cb.completed? }
@@ -512,9 +512,9 @@ describe Zookeeper do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
-        @cb = ZookeeperCallbacks::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
         @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
 
         wait_until { @cb.completed? }
@@ -559,7 +559,7 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.create(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { @zk.create(:path => @path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -652,7 +652,7 @@ describe Zookeeper do
 
     describe :async do
       before do
-        @cb = ZookeeperCallbacks::StringCallback.new
+        @cb = Zookeeper::Callbacks::StringCallback.new
       end
 
       describe :default_flags do
@@ -686,7 +686,7 @@ describe Zookeeper do
 
           lambda do
             @zk.create(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path)
-          end.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          end.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -823,7 +823,7 @@ describe Zookeeper do
 
     describe :async do
       before do
-        @cb = ZookeeperCallbacks::VoidCallback.new
+        @cb = Zookeeper::Callbacks::VoidCallback.new
       end
 
       describe 'without version' do
@@ -888,7 +888,7 @@ describe Zookeeper do
       end
 
       it %[should return a stat for the path] do
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
@@ -908,7 +908,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::ACLCallback.new
+        @cb = Zookeeper::Callbacks::ACLCallback.new
         @rv = @zk.get_acl(:path => @path, :callback => @cb, :callback_context => @path)
 
         wait_until(2) { @cb.completed? }
@@ -916,7 +916,7 @@ describe Zookeeper do
       end
 
       it %[should return a stat for the path] do
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
@@ -924,7 +924,7 @@ describe Zookeeper do
         acls.should be_kind_of(Array)
 
         acl = acls.first
-        acl.should be_kind_of(ZookeeperACLs::ACL)
+        acl.should be_kind_of(Zookeeper::ACLs::ACL)
 
         acl.perms.should == Zookeeper::ZOO_PERM_ALL
 
@@ -938,7 +938,7 @@ describe Zookeeper do
 
     before do
       @perms = 5
-      @new_acl = [ZookeeperACLs::ACL.new(:perms => @perms, :id => ZookeeperACLs::ZOO_ANYONE_ID_UNSAFE)]
+      @new_acl = [Zookeeper::ACLs::ACL.new(:perms => @perms, :id => Zookeeper::ACLs::ZOO_ANYONE_ID_UNSAFE)]
       pending("No idea how to set ACLs")
     end
 

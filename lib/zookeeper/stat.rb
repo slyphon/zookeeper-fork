@@ -1,4 +1,4 @@
-module ZookeeperStat
+module Zookeeper
   class Stat
     attr_reader :version, :exists, :czxid, :mzxid, :ctime, :mtime, :cversion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid
 
