@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "slyphon-zookeeper"
-  s.version     = '0.2.10'
+  s.version     = '0.5.0.beta.1'
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.description = s.summary
   s.homepage    = 'https://github.com/slyphon/zookeeper'
 
-  s.add_development_dependency "rspec", ">= 2.0.0"
+  s.add_development_dependency "rspec", "~> 2.8"
   s.add_development_dependency 'flexmock', '~> 0.8.11'
   s.add_development_dependency 'eventmachine', '1.0.0.beta.4'
   s.add_development_dependency 'evented-spec', '~> 0.9.0'
