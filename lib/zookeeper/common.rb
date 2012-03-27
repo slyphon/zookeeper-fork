@@ -3,6 +3,7 @@ require 'zookeeper/exceptions'
 module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
+  ZOO_SESSION_EVENT    = -1
 
   def get_next_event(blocking=true)
     return nil if closed? # protect against this happening in a callback after close
@@ -31,9 +32,15 @@ protected
                                  :context => call_opts[:callback_context] }
   end
   
-  def get_watcher(req_id)
+  def get_watcher(req_id, type)
     @req_mutex.synchronize {
-      req_id != ZKRB_GLOBAL_CB_REQ ? @watcher_reqs.delete(req_id) : @watcher_reqs[req_id]
+      # Don't delete the global callback, and don't delete other watchers
+      # if we got a session event.
+      if req_id == ZKRB_GLOBAL_CB_REQ || type == ZOO_SESSION_EVENT
+        @watcher_reqs[req_id]
+      else
+        @watcher_reqs.delete(req_id)
+      end
     }
   end
   
@@ -52,7 +59,7 @@ protected
     hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)
     hash[:acl] = hash[:acl].map { |acl| ZookeeperACLs::ACL.new(acl) } if hash[:acl]
     
-    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
+    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id], hash[:type])
 
     # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
     # we want to rerun the callback at a later time when we eventually do have
