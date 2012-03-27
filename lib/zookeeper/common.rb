@@ -59,7 +59,7 @@ protected
     hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)
     hash[:acl] = hash[:acl].map { |acl| ZookeeperACLs::ACL.new(acl) } if hash[:acl]
     
-    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
+    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id], hash[:type])
 
     # when connectivity with the server is lost, on reconnection it's possible
     # to receive duplicate responses. If we've already handled a response for a
