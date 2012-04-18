@@ -41,6 +41,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def get(options = {})
+    logger.debug { "#{self.class}#get, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
     assert_required_keys(options, [:path])
@@ -53,6 +54,8 @@ class Zookeeper < ZookeeperBase
   end
 
   def set(options = {})
+    logger.debug { "#{self.class}##{__method__}, options: #{scrub_data_for_log(options).inspect}" }
+
     assert_open
     assert_supported_keys(options, [:path, :data, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
@@ -67,6 +70,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def get_children(options = {})
+    logger.debug { "#{self.class}#get_children, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
@@ -79,6 +83,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def stat(options = {})
+    logger.debug { "#{self.class}##{__method__}, options: #{options.inspect}" } 
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
@@ -91,6 +96,8 @@ class Zookeeper < ZookeeperBase
   end
 
   def create(options = {})
+    logger.debug { "#{self.class}##{__method__}, options: #{scrub_data_for_log(options).inspect}" }
+
     assert_open
     assert_supported_keys(options, [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context])
     assert_required_keys(options, [:path])
@@ -110,6 +117,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def delete(options = {})
+    logger.debug { "#{self.class}#delete, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
@@ -128,6 +136,7 @@ class Zookeeper < ZookeeperBase
   #   the ZookeeperCallbacks::VoidCallback and not rely on the string value.
   #
   def sync(options = {})
+    logger.debug { "#{self.class}#sync, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context])
     assert_required_keys(options, [:path, :callback])
@@ -140,6 +149,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def set_acl(options = {})
+    logger.debug { "#{self.class}#set_acl, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :acl, :version, :callback, :callback_context])
     assert_required_keys(options, [:path, :acl])
@@ -152,6 +162,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def get_acl(options = {})
+    logger.debug { "#{self.class}#get_acl, options: #{options.inspect}" }
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context])
     assert_required_keys(options, [:path])
@@ -271,6 +282,14 @@ private
   # must be supplied by parent class impl.
   def assert_open
     super
+  end
+
+  def scrub_data_for_log(hash)
+    hash.dup.tap do |h|
+      if h[:data] and h[:data].length > 50
+        h[:data] = "#{h[:data].slice(0, 50)}<...snip!>"
+      end
+    end
   end
 end
 

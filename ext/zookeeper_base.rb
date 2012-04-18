@@ -8,6 +8,7 @@ class ZookeeperBase < CZookeeper
   include ZookeeperACLs
   include ZookeeperStat
 
+  class DispatchShutdownException < StandardError; end
 
   ZKRB_GLOBAL_CB_REQ   = -1
 
@@ -17,6 +18,11 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
 
+  # @private
+  KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
+
+  # @private
+  MAGIC_SHUTDOWN_NUMBER = 42
 
   def reopen(timeout = 10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
@@ -27,13 +33,13 @@ class ZookeeperBase < CZookeeper
     
 #     @default_watcher ||= watcher
 
+    close
+
     @req_mutex.synchronize do
       # flushes all outstanding watcher reqs.
       @watcher_reqs.clear
       set_default_global_watcher
     end
-
-    close
 
     @start_stop_mutex.synchronize do
 #       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
@@ -49,6 +55,7 @@ class ZookeeperBase < CZookeeper
       end
     end
 
+    setup_event_delivery_thread!
     setup_dispatch_thread!
     state
   end
@@ -64,6 +71,14 @@ class ZookeeperBase < CZookeeper
     raise ArgumentError, "Host argument #{host.inspect} may not end with /" if host.end_with?('/')
 
     @host = host
+
+    # the event queue follows the same pattern as in the java implementation,
+    # events from the backend are shunted into this queue first. get_next_event
+    # only deals with this object, allowing for a separation between backend/C and
+    # user-dispatch code
+    @event_queue = nil
+
+    @event_delivery_thread = nil
 
     @start_stop_mutex = Monitor.new
 
@@ -108,7 +123,6 @@ class ZookeeperBase < CZookeeper
 
   def close
     stop_running!
-    stop_dispatch_thread!
 
     @start_stop_mutex.synchronize do
       if !@_closed and @_data
@@ -116,7 +130,11 @@ class ZookeeperBase < CZookeeper
       end
     end
 
+    stop_event_delivery_thread!
+    stop_dispatch_thread!
+
     close_selectable_io!
+    close_event_queue!
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which
@@ -163,43 +181,39 @@ class ZookeeperBase < CZookeeper
     client_id.passwd
   end
 
+  def get_next_event(blocking=true)
+    return nil unless running?
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "get_next_event delivering event: #{event.inspect}" }
+      raise DispatchShutdownException if event == KILL_TOKEN
+    end
+  rescue ThreadError
+    nil
+  end
+
 protected
   # use this method to set the @_running flag to false
   def stop_running!
-    logger.debug { "#{self.class}##{__method__}" }
-
     @start_stop_mutex.synchronize do
-      @_running = false if @_running
-    end
-  end
-
-  # this method is part of the reopen/close code, and is responsible for
-  # shutting down the dispatch thread. 
-  #
-  # @dispatch will be nil when this method exits
-  #
-  def stop_dispatch_thread!
-    logger.debug { "#{self.class}##{__method__}" }
-
-    if @dispatcher
-      unless @_closed
-        wake_event_loop! # this is a C method
+      if @_running
+        logger.debug { "#{self.class}##{__method__}" }
+        @_running = false
       end
-      @dispatcher.join 
-      @dispatcher = nil
     end
   end
 
   def close_selectable_io!
-    logger.debug { "#{self.class}##{__method__}" }
+    if @selectable_io
+      logger.debug { "#{self.class}##{__method__}" }
     
-    # this is set up in the C init method, but it's easier to 
-    # do the teardown here, as this is our half of a pipe. The
-    # write half is controlled by the C code and will be closed properly 
-    # when close_handle is called
-    begin
-      @selectable_io.close if @selectable_io
-    rescue IOError
+      # this is set up in the C init method, but it's easier to 
+      # do the teardown here, as this is our half of a pipe. The
+      # write half is controlled by the C code and will be closed properly 
+      # when close_handle is called
+      begin
+        @selectable_io.close
+      rescue IOError
+      end
     end
   end
 
@@ -238,19 +252,87 @@ protected
     end
   end
 
-  def setup_dispatch_thread!
-    @dispatcher = Thread.new do
-      while running?
-        begin                     # calling user code, so protect ourselves
-          dispatch_next_callback
-#         rescue Errno::EBADF # don't print this one, may happen when shutting down
-        rescue Exception => e
-          $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
+  # This thread shunts events off of the backend queue and puts them into a 
+  # ruby queue. this allows for a simpler shutdown sequence
+  def setup_event_delivery_thread!
+    @event_queue ||= ZookeeperCommon::QueueWithPipe.new
+
+    @event_delivery_thread ||= Thread.new do
+      begin
+        while true
+          ev = get_next_event_from_backend(true) # always be blocking
+
+          break if ev == MAGIC_SHUTDOWN_NUMBER
+
+          @event_queue << ev
         end
+      rescue Errno::EBADF
+        logger.debug { "got Errno::EBADF from backend" }
+      ensure
+        logger.debug { "event_delivery_thread is exiting!" }
       end
-      logger.debug { "dispatch thread exiting!" }
     end
   end
+
+  def stop_event_delivery_thread!
+    if @event_delivery_thread
+      logger.debug { "#{self.class}##{__method__}" }
+
+      unless @_closed
+        wake_event_loop! # this is a C method
+      end
+      @event_delivery_thread.join 
+      @event_delivery_thread = nil
+    end
+  end
+
+  def setup_dispatch_thread!
+    @dispatcher ||= Thread.new do
+      begin
+        while running?
+          begin                     # calling user code, so protect ourselves
+            dispatch_next_callback
+          rescue DispatchShutdownException 
+            # we are shutting down
+          rescue Exception => e
+            $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
+          end
+        end
+      ensure
+        logger.debug { "dispatch thread exiting!" }
+      end
+    end
+  end
+  
+  # this method is part of the reopen/close code, and is responsible for
+  # shutting down the dispatch thread. 
+  #
+  # @dispatch will be nil when this method exits
+  #
+  def stop_dispatch_thread!
+    # the event delivery thread should be down before running this
+    stop_event_delivery_thread!
+
+    if @dispatcher
+      logger.debug { "#{self.class}##{__method__}" }
+
+      @event_queue << KILL_TOKEN
+
+      unless @dispatcher.join(3)
+        warn "WARNING: Zookeeper dispatcher thread hung! continuing to prevent lockup, bad things may happen!"
+      end
+
+      @dispatcher = nil
+    end
+  end
+
+  def close_event_queue!
+    if @event_queue
+      @event_queue.close
+      @event_queue = nil
+    end
+  end
+
 
   # TODO: Make all global puts configurable
   def get_default_global_watcher

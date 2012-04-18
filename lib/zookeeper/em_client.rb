@@ -71,7 +71,7 @@ module ZookeeperEM
       EM.schedule do
         if running? and not closed?
           begin
-            logger.debug { "adding EM.watch(#{selectable_io.inspect})" }
+#             logger.debug { "adding EM.watch(#{selectable_io.inspect})" }
             @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
           rescue Exception => e
             $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
@@ -83,12 +83,12 @@ module ZookeeperEM
     def finish_closing
       unless @_closed
         @start_stop_mutex.synchronize do
-          logger.debug { "closing handle" }
+#           logger.debug { "closing handle" }
           close_handle
         end
 
         unless selectable_io.closed?
-          logger.debug { "calling close on selectable_io: #{selectable_io.inspect}" }
+#           logger.debug { "calling close on selectable_io: #{selectable_io.inspect}" }
           selectable_io.close
         end
       end
@@ -116,7 +116,7 @@ module ZookeeperEM
 
       @on_unbind = EM::DefaultDeferrable.new.tap do |d|
         d.callback do
-          logger.debug { "on_unbind deferred fired" }
+#           logger.debug { "on_unbind deferred fired" }
         end
       end
 
@@ -124,7 +124,7 @@ module ZookeeperEM
       # callback in next_tick @em_connection in the client may not be set
       # (which on_attached callbacks may be relying on)
       EM.next_tick do 
-        logger.debug { "firing on_attached callback" }
+#         logger.debug { "firing on_attached callback" }
         @zk_client.on_attached.succeed
       end
     end

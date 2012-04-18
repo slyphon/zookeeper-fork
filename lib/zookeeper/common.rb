@@ -5,6 +5,7 @@ module ZookeeperCommon
   ZKRB_GLOBAL_CB_REQ   = -1
 
   def get_next_event(blocking=true)
+    # XXX: this seems to be a duplication of code in zookeeper.c
     return nil if closed? # protect against this happening in a callback after close
     super(blocking) 
   end
@@ -108,3 +109,5 @@ private
     end
   end
 end
+
+require 'zookeeper/common/queue_with_pipe'

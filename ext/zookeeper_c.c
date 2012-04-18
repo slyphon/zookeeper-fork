@@ -34,6 +34,7 @@ struct zkrb_instance_data {
   clientid_t          myid;
   zkrb_queue_t      *queue;
   long              object_id; // the ruby object this instance data is associated with
+  int               close_requested;
 };
 
 typedef enum {
@@ -46,8 +47,7 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
-
-static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+static int close_and_destroy_zk_connection(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
 
   if (ptr->zh) {
@@ -57,16 +57,26 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
     rv = zookeeper_close(ptr->zh);
     zkrb_debug("obj_id: %lx, zookeeper_close returned %d", ptr->object_id, rv); 
     free((void *) ctx);
+    ptr->zh = NULL;
   }
 
+  return rv;
+}
+
+static void close_and_destroy_zkrb_queue(struct zkrb_instance_data* ptr) {
 #warning [wickman] TODO: fire off warning if queue is not empty
   if (ptr->queue) {
     zkrb_debug("obj_id: %lx, freeing queue pointer: %p", ptr->object_id, ptr->queue);
     zkrb_queue_free(ptr->queue);
+    ptr->queue = NULL;
   }
+}
 
-  ptr->zh = NULL;
-  ptr->queue = NULL;
+static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+  int rv = ZOK;
+
+  rv = close_and_destroy_zk_connection(ptr);
+  close_and_destroy_zkrb_queue(ptr);
 
   return rv;
 }
@@ -172,6 +182,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           &zk_local_ctx->myid,
           ctx,
           0);
+
+  zk_local_ctx->close_requested = 0;
 
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
@@ -500,20 +512,19 @@ static int is_closed(VALUE self) {
   return RTEST(rval);
 }
 
-/* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
+// the event delivery thread knows that if it sees this as a return value from
+// get_next_event_from_backend, then we're shutting down and the loop should break
+#define MAGIC_SHUTDOWN_NUMBER() INT2FIX(42)
 
-static VALUE method_get_next_event(VALUE self, VALUE blocking) {
+
+static VALUE method_get_next_event_from_backend(VALUE self, VALUE blocking) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
 
   for (;;) {
 
-    // we use the is_running(self) method here because it allows us to have a
-    // ruby-land semaphore that we can also use in the java extension
-    //
-    if (is_closed(self) || !is_running(self)) {
-      zkrb_debug_inst(self, "is_closed(self): %d, is_running(self): %d, method_get_next_event is exiting loop", is_closed(self), is_running(self));
-      return Qnil;  // this case for shutdown
+    if (is_closed(self) || !is_running(self) || (zk && zk->close_requested)) {
+      return MAGIC_SHUTDOWN_NUMBER();  // this case for shutdown
     }
 
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
@@ -561,6 +572,7 @@ static VALUE method_has_events(VALUE self) {
 static VALUE method_wake_event_loop_bang(VALUE self) {
   FETCH_DATA_PTR(self, zk); 
 
+  zk->close_requested = 1;
   zkrb_debug_inst(self, "Waking event loop: %p", zk->queue);
   zkrb_signal(zk->queue);
 
@@ -589,15 +601,23 @@ static VALUE method_close_handle(VALUE self) {
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
 
-  zkrb_debug_inst(self, "calling destroy_zkrb_instance");
+  zkrb_debug_inst(self, "calling close_and_destroy_zk_connection");
 
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
-  int rc = destroy_zkrb_instance(zk);
+  int rc = close_and_destroy_zk_connection(zk);
+  close_and_destroy_zkrb_queue(zk); // maybe move this out into a different call?
 
   zkrb_debug("destroy_zkrb_instance returned: %d", rc);
 
   return Qnil;
 /*  return INT2FIX(rc);*/
+}
+
+static VALUE method_free_backend_queue(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+
+  // XXX: SHUTDOWN SHOULD BE HANDLED ON THE C SIDE
+  
 }
 
 static VALUE method_deterministic_conn_order(VALUE self, VALUE yn) {
@@ -682,7 +702,7 @@ static void zkrb_define_methods(void) {
   // DEFINE_METHOD(add_auth, 3);
 
   // methods for the ruby-side event manager
-  DEFINE_METHOD(get_next_event, 1);
+  DEFINE_METHOD(get_next_event_from_backend, 1);
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?

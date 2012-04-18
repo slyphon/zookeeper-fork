@@ -18,16 +18,18 @@ shared_examples_for "connection" do
   end
 
   after :all do
-    Zookeeper.logger.warn "running shared examples after :all"
-    # close the chrooted connection
-    zk.delete(:path => path)
-    zk.close
+    Zookeeper.logger.warn "running shared_examples_for 'connection' after :all block"
 
-    wait_until do 
-      begin
-        !zk.connected?
-      rescue RuntimeError
-        true
+    if zk
+      zk.delete(:path => path)
+      zk.close
+
+      wait_until do 
+        begin
+          !zk.connected?
+        rescue RuntimeError
+          true
+        end
       end
     end
   end
