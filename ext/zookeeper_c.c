@@ -34,7 +34,7 @@ struct zkrb_instance_data {
   clientid_t          myid;
   zkrb_queue_t      *queue;
   long              object_id; // the ruby object this instance data is associated with
-  int               close_requested;
+  int               wakeup_requested;
 };
 
 typedef enum {
@@ -183,7 +183,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           ctx,
           0);
 
-  zk_local_ctx->close_requested = 0;
+  zk_local_ctx->wakeup_requested = 0;
 
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
@@ -523,7 +523,8 @@ static VALUE method_get_next_event_from_backend(VALUE self, VALUE blocking) {
 
   for (;;) {
 
-    if (is_closed(self) || !is_running(self) || (zk && zk->close_requested)) {
+    if (zk && zk->wakeup_requested) {
+      zk->wakeup_requested = 0;
       return MAGIC_SHUTDOWN_NUMBER();  // this case for shutdown
     }
 
@@ -572,7 +573,7 @@ static VALUE method_has_events(VALUE self) {
 static VALUE method_wake_event_loop_bang(VALUE self) {
   FETCH_DATA_PTR(self, zk); 
 
-  zk->close_requested = 1;
+  zk->wakeup_requested = 1;
   zkrb_debug_inst(self, "Waking event loop: %p", zk->queue);
   zkrb_signal(zk->queue);
 

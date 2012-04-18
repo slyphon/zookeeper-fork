@@ -84,19 +84,7 @@ class ZookeeperBase < CZookeeper
 
     @default_watcher = (watcher or get_default_global_watcher)
 
-    # used by the C layer. CZookeeper sets this to true when the init method
-    # has completed. we set this value to false to signal to the C code
-    # (especially the event delivery loop) that we're ready for shutdown
-    #
-    # you should grab the @start_stop_mutex before messing with this flag
-    @_running = nil
-
-    # This is set to true after destroy_zkrb_instance has been called and all
-    # CZookeeper state has been cleaned up
-    @_closed = false  # also used by the C layer
-
-    # the actual C data is stashed in this ivar. never *ever* touch this
-    @_data = nil
+    init_instance_state!
 
     yield self if block_given?
 
@@ -124,17 +112,18 @@ class ZookeeperBase < CZookeeper
   def close
     stop_running!
 
+    stop_event_delivery_thread!
+    stop_dispatch_thread!
+
     @start_stop_mutex.synchronize do
       if !@_closed and @_data
         close_handle
       end
     end
 
-    stop_event_delivery_thread!
-    stop_dispatch_thread!
-
     close_selectable_io!
     close_event_queue!
+    init_instance_state!
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which
@@ -169,7 +158,7 @@ class ZookeeperBase < CZookeeper
   end
 
   def state
-    return ZOO_CLOSED_STATE if closed?
+    return ZOO_CLOSED_STATE if (@_data.nil? or closed?)
     super
   end
 
@@ -184,11 +173,28 @@ class ZookeeperBase < CZookeeper
   def get_next_event(blocking=true)
     return nil unless running?
     @event_queue.pop(!blocking).tap do |event|
-      logger.debug { "get_next_event delivering event: #{event.inspect}" }
+      logger.debug { "get_next_event delivering event: #{event.inspect} is kill token? #{event == KILL_TOKEN}" }
       raise DispatchShutdownException if event == KILL_TOKEN
     end
   rescue ThreadError
     nil
+  end
+
+private
+  def init_instance_state!
+    # used by the C layer. CZookeeper sets this to true when the init method
+    # has completed. we set this value to false to signal to the C code
+    # (especially the event delivery loop) that we're ready for shutdown
+    #
+    # you should grab the @start_stop_mutex before messing with this flag
+    @_running = nil
+
+    # This is set to true after destroy_zkrb_instance has been called and all
+    # CZookeeper state has been cleaned up
+    @_closed = false  # also used by the C layer
+
+    # the actual C data is stashed in this ivar. never *ever* touch this
+    @_data = nil
   end
 
 protected
@@ -262,7 +268,10 @@ protected
         while true
           ev = get_next_event_from_backend(true) # always be blocking
 
-          break if ev == MAGIC_SHUTDOWN_NUMBER
+          if ev == MAGIC_SHUTDOWN_NUMBER
+            logger.debug { "#{self.class}##{__method__} got MAGIC_SHUTDOWN_NUMBER, breaking out of loop" }
+            break 
+          end
 
           @event_queue << ev
         end
@@ -278,9 +287,11 @@ protected
     if @event_delivery_thread
       logger.debug { "#{self.class}##{__method__}" }
 
-      unless @_closed
+      unless closed?
         wake_event_loop! # this is a C method
       end
+
+      logger.debug {  "waiting for event delivery thread to exit" }
       @event_delivery_thread.join 
       @event_delivery_thread = nil
     end
@@ -289,11 +300,13 @@ protected
   def setup_dispatch_thread!
     @dispatcher ||= Thread.new do
       begin
-        while running?
+        while true
           begin                     # calling user code, so protect ourselves
             dispatch_next_callback
           rescue DispatchShutdownException 
             # we are shutting down
+            logger.debug { "dispatch thread got DispatchShutdownException, we're bailing" }
+            break
           rescue Exception => e
             $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
           end
@@ -316,10 +329,11 @@ protected
     if @dispatcher
       logger.debug { "#{self.class}##{__method__}" }
 
-      @event_queue << KILL_TOKEN
+      @event_queue.push(KILL_TOKEN)
 
+      logger.debug { "joining dispatch thread" }
       unless @dispatcher.join(3)
-        warn "WARNING: Zookeeper dispatcher thread hung! continuing to prevent lockup, bad things may happen!"
+        logger.warn { "WARNING: Zookeeper dispatcher thread hung! continuing to prevent lockup, bad things may happen!" }
       end
 
       @dispatcher = nil
@@ -332,7 +346,6 @@ protected
       @event_queue = nil
     end
   end
-
 
   # TODO: Make all global puts configurable
   def get_default_global_watcher
