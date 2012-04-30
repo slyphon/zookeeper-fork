@@ -49,7 +49,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path])
 
     req_id = setup_call(:get, options)
-    rc, value, stat = super(req_id, options[:path], options[:callback], options[:watcher])
+    rc, value, stat = super(req_id, options[:path].dup, options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:data => value, :stat => Stat.new(stat))
@@ -63,7 +63,7 @@ class Zookeeper < ZookeeperBase
     options[:version] ||= -1
 
     req_id = setup_call(:set, options)
-    rc, stat = super(req_id, options[:path], options[:data], options[:callback], options[:version])
+    rc, stat = super(req_id, options[:path].dup, options[:data].dup, options[:callback], options[:version])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:stat => Stat.new(stat))
@@ -75,7 +75,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path])
 
     req_id = setup_call(:get_children, options)
-    rc, children, stat = super(req_id, options[:path], options[:callback], options[:watcher])
+    rc, children, stat = super(req_id, options[:path].dup, options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:children => children, :stat => Stat.new(stat))
@@ -87,7 +87,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path])
 
     req_id = setup_call(:stat, options)
-    rc, stat = exists(req_id, options[:path], options[:callback], options[:watcher])
+    rc, stat = exists(req_id, options[:path].dup, options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:stat => Stat.new(stat))
@@ -106,7 +106,7 @@ class Zookeeper < ZookeeperBase
     options[:acl] ||= ZOO_OPEN_ACL_UNSAFE
 
     req_id = setup_call(:create, options)
-    rc, newpath = super(req_id, options[:path], options[:data], options[:callback], options[:acl], flags)
+    rc, newpath = super(req_id, options[:path].dup, options[:data].dup, options[:callback], options[:acl], flags)
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:path => newpath)
@@ -119,7 +119,7 @@ class Zookeeper < ZookeeperBase
     options[:version] ||= -1
 
     req_id = setup_call(:delete, options)
-    rc = super(req_id, options[:path], options[:version], options[:callback])
+    rc = super(req_id, options[:path].dup, options[:version], options[:callback])
 
     { :req_id => req_id, :rc => rc }
   end
@@ -149,7 +149,7 @@ class Zookeeper < ZookeeperBase
     options[:version] ||= -1
 
     req_id = setup_call(:set_acl, options)
-    rc = super(req_id, options[:path], options[:acl], options[:callback], options[:version])
+    rc = super(req_id, options[:path].dup, options[:acl], options[:callback], options[:version])
 
     { :req_id => req_id, :rc => rc }
   end
@@ -160,7 +160,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path])
 
     req_id = setup_call(:get_acl, options)
-    rc, acls, stat = super(req_id, options[:path], options[:callback])
+    rc, acls, stat = super(req_id, options[:path].dup, options[:callback])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))

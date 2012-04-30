@@ -23,7 +23,7 @@ class CZookeeper
   end
 
   def initialize(host, event_queue, opts={})
-    @host = host
+    @host = host.dup.freeze     # people do weird things to strings
     @event_queue = event_queue
     
     # used by the C layer. CZookeeper sets this to true when the init method

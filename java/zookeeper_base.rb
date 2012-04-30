@@ -197,7 +197,7 @@ class ZookeeperBase
   end
 
   def initialize(host, timeout=10, watcher=nil, options={})
-    @host = host
+    @host = host.dup
     @event_queue = QueueWithPipe.new
     @current_req_id = 0
 
