@@ -1,4 +1,21 @@
-zookeeper
+# NOTICE #
+
+This repository is the old slyphon/zookeeper repository and is being kept because slyphon-zookeeper gems were cut off this fork (and unfortunately, used conflicting version numbers). 
+
+All development will henceforth be carried out on the former twitter/zookeeper repository which is now named 'slyphon/zookeeper'
+
+Confused yet?
+
+the transfer went like this:
+
+* `twitter/zookeeper` -> `slyphon/twitter-zookeeper`
+* `slyphon/zookeeper` -> `slyphon/zookeeper-fork`
+* `slyphon/twitter-zookeeper` -> `slyphon/zookeeper`
+
+
+## zookeeper ##
+
+
 
 An interface to the Zookeeper distributed configuration server.
 
